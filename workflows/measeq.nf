@@ -46,18 +46,24 @@ workflow MEASEQ {
 
     // MODULE: Setup nextclade dataset
     //
-    NEXTCLADE_DATASETGET(
-        params.nextclade_dataset_name,
-        params.nextclade_dataset_tag
-    )
-    ch_versions = ch_versions.mix(NEXTCLADE_DATASETGET.out.versions)
+    ch_n450_nextclade_dataset = Channel.empty()
+    if ( params.n450_nextclade_dataset ) {
+        ch_n450_nextclade_dataset = Channel.value(file(params.n450_nextclade_dataset, type: 'dir', checkIfExists: true))
+    } else {
+        NEXTCLADE_DATASETGET(
+            params.nextclade_dataset_name,
+            params.nextclade_dataset_tag
+        )
+        ch_n450_nextclade_dataset = NEXTCLADE_DATASETGET.out.dataset    
+        ch_versions = ch_versions.mix(NEXTCLADE_DATASETGET.out.versions)
+    }
 
     //
     // WORKFLOW: Reference Setup
     //
     SETUP_REFERENCE_DATA(
         samplesheet,
-        NEXTCLADE_DATASETGET.out.dataset
+        ch_n450_nextclade_dataset
     )
     ch_samples              = SETUP_REFERENCE_DATA.out.samples
     ch_primer_bed           = SETUP_REFERENCE_DATA.out.primer_bed
@@ -129,7 +135,7 @@ workflow MEASEQ {
     //
     NEXTCLADE_RUN_N450(
         ch_consensus,
-        NEXTCLADE_DATASETGET.out.dataset
+        ch_n450_nextclade_dataset
     )
     ch_versions = ch_versions.mix(NEXTCLADE_RUN_N450.out.versions.first())
 
