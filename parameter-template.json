@@ -14,5 +14,9 @@
   "platform": {
     "description": "What platform this sequencing data was generated on. 'illumina' or 'nanopore' are the only valid options.",
     "optional": false
+  },
+  "min_depth": {
+    "description": "Minimum depth of coverage for a base to be called. Default is 10.",
+    "optional": true
   }
 }

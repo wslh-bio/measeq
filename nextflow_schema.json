@@ -261,7 +261,7 @@
                     "hidden": true
                 },
                 "min_depth": {
-                    "type": "integer",
+                    "type": ["integer", "string"],
                     "default": 10,
                     "minimum": 0,
                     "description": "Minimum depth to call a base"
@@ -307,6 +307,13 @@
                     "enum": ["2025-03-26--11-47-13Z"],
                     "default": "2025-03-26--11-47-13Z",
                     "description": "Tag for the nextclade dataset to use. Shouldn't be changed unless needed"
+                },
+                "n450_nextclade_dataset": {
+                    "type": "string",
+                    "description": "Path to a nextclade dataset for N450. If not provided, will download from nextstrain",
+                    "format": "directory-path",
+                    "pattern": "^\\S+$",
+                    "fa_icon": "fas fa-folder-open"
                 }
             }
         },
