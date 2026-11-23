@@ -8,8 +8,8 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 include { VADR                                         } from '../../../modules/local/vadr/main'
-//include { NEXTCLADE_DB_INFO as NEXTCLADE_DB_INFO_N450  } from '../../../modules/nf-core/bedtools/coverage/main'
-//include { NEXTCLADE_DB_INFO as NEXTCLADE_DB_INFO_WGS   } from '../../../modules/nf-core/bedtools/coverage/main'
+include { NEXTCLADE_DB_INFO as NEXTCLADE_DB_INFO_N450  } from '../../../modules/local/nextclade_db_info/main'
+include { NEXTCLADE_DB_INFO as NEXTCLADE_DB_INFO_FULL  } from '../../../modules/local/nextclade_db_info/main'
 //include { MOSDEPTH_GENOME_REGIONS                      } from '../../../modules/local/custom/amplicon_depth_heatmap/main'
 //include { WSLH_REPORT                                  } from '../../../modules/local/custom/sample_amplicon_depth/main'
 
@@ -24,8 +24,8 @@ workflow GENERATE_WSLH_REPORT {
     take:
     ch_consensus          // channel: [ val(meta), path(fasta) ]                        consensus sequences
     //ch_bam_bai_bed    // channel: [ val(meta), path(bam), path(bai), path(bed) ]    bam files
-    //ch_n450_dataset   // channel: path(dataset_dir_n450)                                 Nextclade N450 dataset
-    //ch_wgs_dataset    // channel: path(dataset_dir)                                 Nextclade WGS dataset
+    ch_n450_nextclade_dataset   // channel: path(dataset_dir_n450)                                 Nextclade N450 dataset
+    ch_full_nextclade_dataset    // channel: path(dataset_dir)                                 Nextclade WGS dataset
 
     main:
 
@@ -56,6 +56,13 @@ workflow GENERATE_WSLH_REPORT {
     // TODO: Python script to grab info from pathogen.json for each nextclade dataset
     //
 
+    NEXTCLADE_DB_INFO_N450 (
+        ch_n450_nextclade_dataset
+    )
+
+    NEXTCLADE_DB_INFO_FULL (
+        ch_full_nextclade_dataset
+    )
     //
     // Join sample reports together and merge on meta; moddule or nextflow script
     //

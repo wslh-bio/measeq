@@ -306,7 +306,9 @@ workflow MEASEQ {
     ch_versions = ch_versions.mix(GENERATE_REPORT.out.versions)
 
     GENERATE_WSLH_REPORT (
-        ch_consensus
+        ch_consensus,
+        ch_n450_nextclade_dataset,
+        ch_full_nextclade_dataset
     )
 
     emit:
