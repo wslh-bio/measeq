@@ -8,8 +8,8 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 include { VADR                                         } from '../../../modules/local/vadr/main'
-include { NEXTCLADE_DB_INFO as NEXTCLADE_DB_INFO_N450  } from '../../../modules/nf-core/bedtools/coverage/main'
-include { NEXTCLADE_DB_INFO as NEXTCLADE_DB_INFO_WGS   } from '../../../modules/nf-core/bedtools/coverage/main'
+//include { NEXTCLADE_DB_INFO as NEXTCLADE_DB_INFO_N450  } from '../../../modules/nf-core/bedtools/coverage/main'
+//include { NEXTCLADE_DB_INFO as NEXTCLADE_DB_INFO_WGS   } from '../../../modules/nf-core/bedtools/coverage/main'
 //include { MOSDEPTH_GENOME_REGIONS                      } from '../../../modules/local/custom/amplicon_depth_heatmap/main'
 //include { WSLH_REPORT                                  } from '../../../modules/local/custom/sample_amplicon_depth/main'
 
@@ -32,7 +32,7 @@ workflow GENERATE_WSLH_REPORT {
     ch_versions = Channel.empty()
 
 
-    if (!skip_vadr) {
+    if (!params.skip_vadr) {
 
     // Prepare ch_consensus for vadr
         ch_consensus.view()

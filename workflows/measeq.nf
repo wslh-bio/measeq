@@ -8,9 +8,10 @@ include { NANOPORE_CONSENSUS      } from '../subworkflows/local/nanopore_consens
 include { ILLUMINA_CONSENSUS      } from '../subworkflows/local/illumina_consensus'
 include { FASTQC                  } from '../modules/nf-core/fastqc/main'
 include { ADJUST_FASTA_HEADER as ADJUST_N450_FASTA_HEADER } from '../modules/local/adjust_fasta_header/main'
-include { NEXTCLADE_DATASETGET    } from '../modules/nf-core/nextclade/datasetget/main'
+include { NEXTCLADE_DATASETGET as NEXTCLADE_DATASETGET_N450    } from '../modules/nf-core/nextclade/datasetget/main'
+include { NEXTCLADE_DATASETGET as NEXTCLADE_DATASETGET_FULL    } from '../modules/nf-core/nextclade/datasetget/main'
 include { NEXTCLADE_RUN as NEXTCLADE_RUN_N450             } from '../modules/nf-core/nextclade/run/main'
-include { NEXTCLADE_RUN as NEXTCLADE_RUN_CUSTOM           } from '../modules/nf-core/nextclade/run/main'
+include { NEXTCLADE_RUN as NEXTCLADE_RUN_FULL             } from '../modules/nf-core/nextclade/run/main'
 include { SAMTOOLS_DEPTH          } from '../modules/nf-core/samtools/depth/main'
 include { COMPARE_INTERNAL_DSID   } from '../modules/local/custom/compare_internal_dsid/main'
 include { MAKE_SAMPLE_QC_CSV      } from '../modules/local/qc/sample/main'
@@ -31,11 +32,9 @@ workflow MEASEQ {
     samplesheet   // channel: samplesheet read in from --input // [ meta(id, single-end), fastqs(f1,f2) ]
 
     main:
-    ch_versions = Channel.empty()
-    ch_multiqc_files = Channel.empty()
+    ch_versions = channel.empty()
+    ch_multiqc_files = channel.empty()
     ch_metadata = params.metadata ? file(params.metadata, type: 'file', checkIfExists: true) : []
-    ch_custom_nextclade_dataset = Channel
-        .value(file("$projectDir/assets/custom_measles_nextclade_dataset", type: 'dir', checkIfExists: true))
     ch_id_fasta = params.dsid_fasta ? file(params.dsid_fasta, type: 'file', checkIfExists: true)
         : params.default_gsp_dsid ? file(params.default_gsp_dsid, type: 'file', checkIfExists: true)
         : []
@@ -45,19 +44,40 @@ workflow MEASEQ {
     // Setup
     //
 
-    // MODULE: Setup nextclade dataset
+    // MODULE: Setup nextclade datasets
     //
-    ch_n450_nextclade_dataset = Channel.empty()
+    ch_n450_nextclade_dataset = channel.empty()
     if ( params.n450_nextclade_dataset ) {
-        ch_n450_nextclade_dataset = Channel.value(file(params.n450_nextclade_dataset, type: 'dir', checkIfExists: true))
-    } else {
-        NEXTCLADE_DATASETGET(
-            params.nextclade_dataset_name,
-            params.nextclade_dataset_tag
+        ch_n450_nextclade_dataset = channel
+            .value(file(params.n450_nextclade_dataset, type: 'dir', checkIfExists: true))
+    } else if ( params.n450_nextclade_dataset_name ){
+        NEXTCLADE_DATASETGET_N450(
+            params.n450_nextclade_dataset_name,
+            params.n450_nextclade_dataset_tag ?: ''
         )
-        ch_n450_nextclade_dataset = NEXTCLADE_DATASETGET.out.dataset    
-        ch_versions = ch_versions.mix(NEXTCLADE_DATASETGET.out.versions)
+        ch_n450_nextclade_dataset = NEXTCLADE_DATASETGET_N450.out.dataset  
+        ch_versions = ch_versions.mix(NEXTCLADE_DATASETGET_N450.out.versions)
+    } else {
+        error "Provide --n450_nextclade_dataset or --n450_nextclade_dataset_name"
     }
+    
+    
+    ch_full_nextclade_dataset = channel.empty()
+    
+    if ( params.full_nextclade_dataset ) {
+        ch_full_nextclade_dataset = channel
+            .value(file(params.full_nextclade_dataset, type: 'dir', checkIfExists: true))
+    } else if ( params.full_nextclade_dataset_name ) {
+        NEXTCLADE_DATASETGET_FULL(
+            params.full_nextclade_dataset_name,
+            params.full_nextclade_dataset_tag ?: ''
+        )
+        ch_full_nextclade_dataset = NEXTCLADE_DATASETGET_FULL.out.dataset
+        ch_versions = ch_versions.mix(NEXTCLADE_DATASETGET_FULL.out.versions) 
+    } else {
+        ch_full_nextclade_dataset = channel  
+            .value(file("${projectDir}/assets/custom_measles_nextclade_dataset", type: 'dir', checkIfExists: true))
+    }        
 
     //
     // WORKFLOW: Reference Setup
@@ -166,11 +186,11 @@ workflow MEASEQ {
     //
     // MODULE: Run nextclade again using a custom dataset to help determine QC issues in consensus seqs
     //
-    NEXTCLADE_RUN_CUSTOM(
+    NEXTCLADE_RUN_FULL (
         ch_consensus,
-        ch_custom_nextclade_dataset
+        ch_full_nextclade_dataset
     )
-    ch_versions = ch_versions.mix(NEXTCLADE_RUN_CUSTOM.out.versions.first())
+    ch_versions = ch_versions.mix(NEXTCLADE_RUN_FULL.out.versions.first())
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     // QC
@@ -206,7 +226,7 @@ workflow MEASEQ {
         .join(ADJUST_N450_FASTA_HEADER.out.consensus.map { meta, n450_fasta -> tuple(meta.id, n450_fasta)}, by: [0])
         .join(SAMTOOLS_DEPTH.out.tsv.map { meta, depth_bed -> tuple(meta.id, depth_bed)}, by: [0])
         .join(NEXTCLADE_RUN_N450.out.csv.map { meta, nextclade_n450 -> tuple(meta.id, nextclade_n450)}, by: [0])
-        .join(NEXTCLADE_RUN_CUSTOM.out.csv.map { meta, nextclade_full -> tuple(meta.id, nextclade_full)}, by: [0])
+        .join(NEXTCLADE_RUN_FULL.out.csv.map { meta, nextclade_full -> tuple(meta.id, nextclade_full)}, by: [0])
         .join(ch_vcf.map { meta, vcf, tbi -> tuple(meta.id, vcf, tbi)}, by: [0])
         .join(ch_read_json.map { meta, read_json -> tuple(meta.id, read_json)}, by: [0])
         .join(ch_variants_tsv.map { meta, tsv -> tuple(meta.id, tsv)}, by: [0])
