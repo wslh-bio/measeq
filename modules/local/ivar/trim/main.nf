@@ -32,7 +32,7 @@ process IVAR_TRIM {
         -i $bam \\
         -b $bed \\
         -p ${meta.id}.primertrimmed \\
-        > ${meta.id}.ivar.log
+        2> ${meta.id}.ivar.log
 
     samtools \\
         sort \\
