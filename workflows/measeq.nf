@@ -17,6 +17,7 @@ include { MAKE_SAMPLE_QC_CSV      } from '../modules/local/qc/sample/main'
 include { MAKE_FINAL_QC_CSV       } from '../modules/local/qc/summary/main'
 include { GENERATE_AMPLICON_STATS } from '../subworkflows/local/generate_amplicon_stats'
 include { GENERATE_REPORT         } from '../subworkflows/local/generate_report'
+include { GENERATE_WSLH_REPORT     } from '../subworkflows/local/generate_wslh_report'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -277,6 +278,10 @@ workflow MEASEQ {
         ch_versions
     )
     ch_versions = ch_versions.mix(GENERATE_REPORT.out.versions)
+
+    GENERATE_WSLH_REPORT (
+        ch_consensus
+    )
 
     emit:
     versions       = ch_versions                 // channel: [ path(versions.yml) ]
