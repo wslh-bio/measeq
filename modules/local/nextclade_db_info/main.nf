@@ -2,26 +2,43 @@ process NEXTCLADE_DB_INFO {
     tag "$dataset.name"
     label 'process_single'
     
-    //conda "${moduleDir}/environment.yml"
+    conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'https://depot.galaxyproject.org/singularity/python:3.9--1' :
         'biocontainers/python:3.9--1' }"
 
     input:
-    path dataset // a downloaded Nextclade dataset directory containing pathogen.json
+    path dataset
 
     output:
-    //path "*.csv", emit: info
-    //path "versions.yml", emit: versions
+    path "*.tsv",           emit: info
+    path "versions.yml",    emit: versions
 
     script:
-    def prefix = task.ext.prefix ?: "${dataset.name}"
+    def args = task.ext.args ?: ''
     """
-    ls -l ${dataset}/pathogen.json
+    nextclade_db_info.py \\
+        --db_dir ${dataset} \\
+        ${args}
+
+    DB_NAME=\$(awk -F'\\t' 'NR==2 {print \$2}' *_db_info.tsv)
+    DB_VERSION=\$(awk -F'\\t' 'NR==2 {print \$3}' *_db_info.tsv)
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        nextclade_dataset_name: "version_of_dataset"
+        python: \$(python3 --version | sed 's/Python //g')
+        "\${DB_NAME}": "\${DB_VERSION}"
+    END_VERSIONS
+    """
+
+    stub:
+    """
+    touch ${dataset.baseName}_db_info.tsv
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        python: \$(python3 --version | sed 's/Python //g')
+        "${dataset.baseName}": "stub_version"
     END_VERSIONS
     """
 }
